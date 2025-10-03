@@ -1,0 +1,39 @@
+defaults:
+  - env/LunarLander@model_config: model_config
+  - env: LunarLander
+
+env:
+  _target_: gymnasium.make
+model:
+  hidden_dim: 512
+  in_dim: ${model_config.in_dim}
+  out_dim: ${model_config.out_dim}
+  _target_: ${model_config.model_path}
+  device: ${device}
+logger:
+  _target_: logger.tensorboard.TensorBoardLogger
+  log_dir: ${hydra:runtime.output_dir}
+data_miner:
+  _target_: core.dataminer.SimpleDataMiner
+  alpha: 0.8
+  gamma: 0.95
+  model: ${model}
+  env: ${env}
+  batch_size: 64
+  device: ${device}
+  eval_seeds: [424240, 424241, 424242, 424243, 424244, 424245, 424246, 424247, 424248, 424249, 424250]
+trainer:
+  _target_: trainer.ValueReinforceTrainer
+  model: ${model}
+  optimizer:
+    _target_: torch.optim.AdamW
+    lr: 5e-5
+
+num_pseudo_epochs: 5000
+eval_freq: 50
+tensorboard_limit: 15
+tensorboard_port: 6006
+streamlit_port: 8501
+device: cpu
+save_checkpoint: True
+name:

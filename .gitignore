@@ -1,0 +1,5 @@
+**/env
+**/saved_models
+**/outputs
+meta.json
+**/__pycache__
