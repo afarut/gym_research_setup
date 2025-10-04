@@ -13,7 +13,6 @@ class SimpleDataMiner:
             env: Env,
             batch_size,
             eval_seeds,
-            num_trajectories=2, 
             start_seed=0,
             alpha=0.95,
             gamma=0.99,
@@ -23,7 +22,6 @@ class SimpleDataMiner:
         self.model = model
         self.env = env
         self.seed = start_seed
-        self.num_trajectories = num_trajectories
         self.alpha = alpha
         self.gamma = gamma
         self.device = device
@@ -42,7 +40,12 @@ class SimpleDataMiner:
             )
         return result_rewards[::-1]
 
-
+    def get_value_target(self, rewards):
+        result = [rewards[-1]]
+        for i in range(len(rewards) - 2, -1, -1):
+            result.append(result[-1] * self.gamma + rewards[i])
+        return result[::-1]
+    
     def get_trajectory(self, seed):
         self.model.eval()
         trajectory = {
@@ -77,32 +80,13 @@ class SimpleDataMiner:
         )
         trajectory["value_target"] = self.get_value_target(trajectory["reward"])
         return trajectory
-
-
+    
+    def preprocess(self, seeds):
+        raise NotImplementedError
 
     def get_dataloader(self, seeds=[]):
-        trajectories = []
-        rewards = []
-        episode_time = []
-        if seeds:
-            for seed in seeds:
-                trajectory = self.get_trajectory(seed)
-                trajectories.append(trajectory)
-                rewards.append(sum(trajectory["reward"]))
-                episode_time.append(len(trajectory["reward"]))
-        else:
-            for _ in range(self.num_trajectories):
-                trajectory = self.get_trajectory(self.seed)
-                trajectories.append(trajectory)
-                rewards.append(sum(trajectory["reward"]))
-                episode_time.append(len(trajectory["reward"]))
-
-                self.seed += 1
-                while self.seed in self.eval_seeds:
-                    self.seed += 1
-
-        trajectories = list_dict_extend(trajectories)
-        trajectories = stack_dict(trajectories)
+        trajectories, metrics = self.preprocess(seeds)
+    
         trajectories["value_target"] += trajectories["advantage"]
         trajectories["advantage"] = (trajectories["advantage"] - trajectories["advantage"].mean()) / (trajectories["advantage"].std() + 1e-8)
 
@@ -122,14 +106,83 @@ class SimpleDataMiner:
             drop_last=False
         )
 
-        return dataloader, {
+        return dataloader, metrics
+
+
+class TrajectoryDataMiner(SimpleDataMiner):
+    def __init__(
+            self,
+            num_trajectories=2,
+            *args,
+            **kwargs
+        ):
+        super().__init__(*args, **kwargs)
+        self.num_trajectories = num_trajectories
+    
+    def preprocess(self, seeds):
+        trajectories = []
+        rewards = []
+        episode_time = []
+        if not seeds:
+            for _ in range(self.num_trajectories):
+                seeds.append(self.seed)
+                self.seed += 1
+                while self.seed in self.eval_seeds:
+                    self.seed += 1
+    
+        for seed in seeds:
+            trajectory = self.get_trajectory(seed)
+            trajectories.append(trajectory)
+            rewards.append(sum(trajectory["reward"]))
+            episode_time.append(len(trajectory["reward"]))
+
+        trajectories = list_dict_extend(trajectories)
+        trajectories = stack_dict(trajectories)
+
+        return trajectories, {
             "episode time": sum(episode_time) / len(episode_time),
             "rewards": sum(rewards) / len(rewards),
         }
 
 
-    def get_value_target(self, rewards):
-        result = [rewards[-1]]
-        for i in range(len(rewards) - 2, -1, -1):
-            result.append(result[-1] * self.gamma + rewards[i])
-        return result[::-1]
+class StepsDataMiner(SimpleDataMiner):
+    def __init__(
+            self,
+            num_steps=5000,
+            *args,
+            **kwargs
+        ):
+        super().__init__(*args, **kwargs)
+        self.num_steps = num_steps
+    
+    def preprocess(self, seeds):
+        trajectories = []
+        rewards = []
+        episode_time = []
+    
+        for seed in seeds:
+            trajectory = self.get_trajectory(seed)
+            trajectories.append(trajectory)
+            rewards.append(sum(trajectory["reward"]))
+            episode_time.append(len(trajectory["reward"]))
+        else:
+            while sum(episode_time) < self.num_steps:
+                trajectory = self.get_trajectory(self.seed)
+                trajectories.append(trajectory)
+                rewards.append(sum(trajectory["reward"]))
+                episode_time.append(len(trajectory["reward"]))
+
+                self.seed += 1
+                while self.seed in self.eval_seeds:
+                    self.seed += 1
+
+        trajectories = list_dict_extend(trajectories)
+        trajectories = stack_dict(trajectories)
+
+        for key, val in trajectories.items():
+            trajectories[key] = val[:self.num_steps]
+
+        return trajectories, {
+            "episode time": sum(episode_time) / len(episode_time),
+            "rewards": sum(rewards) / len(rewards),
+        }

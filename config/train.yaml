@@ -2,6 +2,14 @@ defaults:
   - env/LunarLander@model_config: model_config
   - env: LunarLander
 
+
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}-0
+  sweep:
+    dir: outputs/${now:%Y-%m-%d}
+    subdir: ${now:%H-%M-%S}-${hydra.job.num}
+
 env:
   _target_: gymnasium.make
 model:
@@ -14,24 +22,25 @@ logger:
   _target_: logger.tensorboard.TensorBoardLogger
   log_dir: ${hydra:runtime.output_dir}
 data_miner:
-  _target_: core.dataminer.SimpleDataMiner
-  alpha: 0.8
-  gamma: 0.95
+  _target_: core.dataminer.StepsDataMiner
+  alpha: 0.9
+  gamma: 0.99
   model: ${model}
   env: ${env}
   batch_size: 64
   device: ${device}
+  num_steps: 1000
   eval_seeds: [424240, 424241, 424242, 424243, 424244, 424245, 424246, 424247, 424248, 424249, 424250]
 trainer:
-  _target_: trainer.ValueReinforceTrainer
+  _target_: core.trainer.ValueReinforceTrainer
   model: ${model}
   optimizer:
     _target_: torch.optim.AdamW
-    lr: 5e-5
+    lr: 2e-5
+seed: 42
 
 num_pseudo_epochs: 5000
 eval_freq: 50
-tensorboard_limit: 15
 tensorboard_port: 6006
 streamlit_port: 8501
 device: cpu

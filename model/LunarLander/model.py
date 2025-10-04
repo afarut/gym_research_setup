@@ -8,7 +8,6 @@ class LunarLander(ModelBase):
     def __init__(self, in_dim, hidden_dim, out_dim, device="cpu"):
         super().__init__(in_dim, hidden_dim, out_dim, device="cpu")
 
-        print("***************")
         self.body = nn.Sequential(
             nn.Linear(in_dim, hidden_dim),
             nn.ReLU(),

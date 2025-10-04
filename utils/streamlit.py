@@ -1,9 +1,11 @@
 import streamlit as st
 import json
-import os
-import subprocess
-from common.utils import kill_process_on_port, is_port_running, restart_tensorboard
+import os, sys
 from omegaconf import OmegaConf
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from common.utils import restart_tensorboard
+
 
 META_FILE = "meta.json"
 

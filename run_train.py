@@ -12,14 +12,15 @@ from common.utils import is_port_running
 @hydra.main(version_base=None, config_path='config', config_name='train')
 def my_app(cfg: DictConfig):
     if HydraConfig.get().mode.name == "MULTIRUN":
-        raise RuntimeError("Multirun is disabled for this script!")
+        cfg.name = f"{cfg.name}-seed_{cfg.seed}"
+
     
     if is_port_running(cfg['streamlit_port']):
         print(f"Streamlit бежит на http://localhost:{cfg['streamlit_port']}")
         print("Если это не streamlit, то измените streamlit_port для запуска")
     else:
         process = subprocess.Popen(
-            ["streamlit", "run", "streamlit.py", f"--server.port={cfg['streamlit_port']}"],
+            ["streamlit", "run", "utils/streamlit.py", f"--server.port={cfg['streamlit_port']}"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             stdin=subprocess.DEVNULL,

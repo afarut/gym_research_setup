@@ -4,7 +4,7 @@ from model.base import ModelBase
 from gymnasium import Env
 from hydra.utils import instantiate
 from logger.base import LoggerBase
-from trainer import BaseTrainer
+from core.trainer import BaseTrainer
 from core.dataminer import SimpleDataMiner
 from tqdm import tqdm
 from common.utils import stack_dict, list_dict_extend, add_meta, rand_by_time, restart_tensorboard
@@ -25,13 +25,14 @@ class Runner:
             name=None,
             checkpoint_path=None,
             checkpoint_drop_past=False,
+            seed=42,
             *args,
             **kwargs
         ):
         assert name is not None
 
-        np.random.seed(42)
-        torch.manual_seed(42)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
 
         self.model = instantiate(model)
         self.model.train()
@@ -126,6 +127,7 @@ class Inference:
         env: Env,
         data_miner: SimpleDataMiner,
         checkpoint_path=None,
+        choice="best",
         seed=None,
         *args,
         **kwargs
@@ -147,7 +149,7 @@ class Inference:
             )
 
             checkpoint_path = checkpoint_path.replace("saved_models", "outputs")
-            self.checkpointer.load_checkpoint(checkpoint_path, "best")
+            self.checkpointer.load_checkpoint(checkpoint_path, choice)
         if seed is None:
             self.seed = rand_by_time(0, 10000)
         else:
