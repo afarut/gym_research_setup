@@ -23,8 +23,8 @@ logger:
   log_dir: ${hydra:runtime.output_dir}
 data_miner:
   _target_: core.dataminer.StepsDataMiner
-  alpha: 0.9
   gamma: 0.99
+  alpha: 0.9
   model: ${model}
   env: ${env}
   batch_size: 64
@@ -36,7 +36,13 @@ trainer:
   model: ${model}
   optimizer:
     _target_: torch.optim.AdamW
-    lr: 2e-5
+    lr: 5e-5
+scheduler:
+  _target_: core.scheduler.CosineAnnealingWarmupLR
+  T_max: ${num_pseudo_epochs}
+  eta_min: 1e-6
+  optimizer: ${trainer.optimizer}
+  warmup_steps: 5
 seed: 42
 
 num_pseudo_epochs: 5000

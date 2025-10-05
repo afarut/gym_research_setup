@@ -25,6 +25,7 @@ class Runner:
             name=None,
             checkpoint_path=None,
             checkpoint_drop_past=False,
+            scheduler=None,
             seed=42,
             *args,
             **kwargs
@@ -38,6 +39,10 @@ class Runner:
         self.model.train()
 
         optimizer = instantiate(trainer.optimizer, self.model.parameters())
+        if scheduler:
+            self.scheduler = instantiate(scheduler, optimizer=optimizer)
+        else:
+            self.scheduler = None
 
         self.env = instantiate(env)
         self.logger = instantiate(logger)
@@ -48,9 +53,11 @@ class Runner:
             "visible": True
         })
 
-        restart_tensorboard(tensorboard_port)
-
-        self.trainer = instantiate(trainer, model=self.model, optimizer=optimizer)
+        self.trainer = instantiate(
+            trainer, 
+            model=self.model, 
+            optimizer=optimizer,
+        )
         self.data_miner = instantiate(data_miner, model=self.model, env=self.env)
 
         self.num_pseudo_epochs = num_pseudo_epochs
@@ -58,16 +65,19 @@ class Runner:
 
         self.checkpointer = CheckPointer(
             self.model, 
-            optimizer, 
+            optimizer,
             self.env, 
             self.logger, 
             self.data_miner, 
-            drop_past=checkpoint_drop_past
+            drop_past=checkpoint_drop_past,
+            scheduler=self.scheduler
         )
         self.checkpoint_epochs = 0
         if checkpoint_path is not None:
             self.checkpoint_epochs = self.checkpointer.load_checkpoint(checkpoint_path, "last")
         assert self.num_pseudo_epochs - self.checkpoint_epochs > 0
+
+        restart_tensorboard(tensorboard_port)
 
     def train(self):
         for epoch in tqdm(range(self.checkpoint_epochs, self.num_pseudo_epochs)):
@@ -91,7 +101,13 @@ class Runner:
                     rollout_metrics
                 )
             )
+
+            lr = metrics["learning rate"] = self.scheduler.get_last_lr()[0]
+
+            self.logger.log({"learning rate": lr}, prefix="train/")
             self.logger.log({key: val.mean() for key, val in rollout_metrics.items()}, prefix="train/")
+
+            self.scheduler.step()
 
         self.checkpointer.save_checkpoint(self.num_pseudo_epochs, "last")
         self.logger.close()

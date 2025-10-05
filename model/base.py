@@ -10,7 +10,7 @@ class ModelBase(nn.Module):
         in_dim, 
         hidden_dim, 
         out_dim,
-        device="cpu",
+        device,
         *args,
         **kwargs
     ):

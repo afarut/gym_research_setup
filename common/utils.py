@@ -46,21 +46,22 @@ def is_port_running(port):
     return False
 
 
-def kill_process_on_port(port):
+def kill_process_on_port(port: int):
     try:
-        result = subprocess.run(
-            ["lsof", "-t", f"-i:{port}"], 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        pids = result.stdout.strip().split("\n")
-        for pid in pids:
-            if pid:
-                os.kill(int(pid), signal.SIGTERM)
-                print(f"Убил процесс PID={pid} на порту {port}")
-    except Exception as e:
-        print(f"Ошибка: {e}")
+        result = subprocess.check_output(
+            ["lsof", "-nP", "-i", f"TCP:{port}"]
+        ).decode()
+        for line in result.splitlines()[1:]:
+            cols = line.split()
+            pid = int(cols[1])
+            cmd = cols[0]
+            if "tensorboard" in cmd.lower() or "python" in cmd.lower():
+                print(f"Killing {cmd} (PID {pid})...")
+                os.kill(pid, signal.SIGKILL)
+            else:
+                print(f"Skipping {cmd} — not TensorBoard.")
+    except subprocess.CalledProcessError:
+        print(f"No process found on port {port}.")
 
 
 def add_meta(entry):

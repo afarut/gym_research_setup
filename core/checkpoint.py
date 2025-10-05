@@ -7,6 +7,7 @@ from logger.base import LoggerBase
 from pathlib import Path
 from core.dataminer import SimpleDataMiner
 from omegaconf import OmegaConf
+from tensorboard.backend.event_processing import event_accumulator
 
 
 class CheckPointer:
@@ -21,6 +22,7 @@ class CheckPointer:
         best_metric=float("-inf"),
         drop_past=False,
         only_model=False,
+        scheduler=None,
     ):
         self.model = model
         self.env = env
@@ -32,6 +34,7 @@ class CheckPointer:
             self.target_metric = target_metric
             self.best_metric = best_metric
             self.data_miner = data_miner
+            self.scheduler = scheduler
 
             _, self.path = self.logger.log_dir.split("outputs")
             self.path = "saved_models" + self.path
@@ -52,6 +55,10 @@ class CheckPointer:
             checkpoint = torch.load(path + f"/{prefix}/optimizer.pth", map_location=self.model.device)
             self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
+            if self.scheduler is not None:
+                checkpoint = torch.load(path + f"/{prefix}/scheduler.pth", map_location=self.model.device)
+                self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+
             checkpoint = torch.load(path + f"/{prefix}/meta.pth")
             cfg = OmegaConf.load(f"{log_dir}/.hydra/config.yaml")
             assert cfg["env"]["id"] == self.env.spec.id
@@ -65,11 +72,14 @@ class CheckPointer:
             if not self.drop_past:
                 os.makedirs(self.logger.log_dir + "/tensorboard", exist_ok=True)
 
-                for filename in os.listdir(log_dir + "/tensorboard"):
-                    src_file = os.path.join(log_dir + "/tensorboard", filename)
-                    dst_file = os.path.join(self.logger.log_dir + "/tensorboard", filename)
-                    if os.path.isfile(src_file):
-                        shutil.copy2(src_file, dst_file)
+                ea = event_accumulator.EventAccumulator(log_dir + "/tensorboard")
+                ea.Reload()
+
+                for tag in ea.Tags().get("scalars", []):
+                    events = ea.Scalars(tag)
+                    for e in events:
+                        if e.step < self.logger.steps[key]:
+                            self.logger.writer.add_scalar(tag, e.value, e.step)
             
             self.best_metric = checkpoint["best_metric"]
 
@@ -96,6 +106,12 @@ class CheckPointer:
             "optimizer_state_dict": self.optimizer.state_dict(),
         }
         torch.save(checkpoint, self.path + f"/{prefix}/optimizer.pth")
+
+        if self.scheduler is not None:
+            checkpoint = {
+                "scheduler_state_dict": self.scheduler.state_dict(),
+            }
+            torch.save(checkpoint, self.path + f"/{prefix}/scheduler.pth")
 
         checkpoint = {
             "data_miner_seed": self.data_miner.seed,

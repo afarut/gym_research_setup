@@ -3,3 +3,6 @@
 eval_freq: 2
 num_pseudo_epochs: 5
 save_checkpoint: False
+data_miner:
+  _target_: core.dataminer.StepsDataMiner
+  num_steps: 200
