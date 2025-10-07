@@ -30,13 +30,17 @@ data_miner:
   batch_size: 64
   device: ${device}
   num_steps: 1000
+  drop_last: True
   eval_seeds: [424240, 424241, 424242, 424243, 424244, 424245, 424246, 424247, 424248, 424249, 424250]
 trainer:
   _target_: core.trainer.ValueReinforceTrainer
   model: ${model}
+  value_coef: 1
+  entropy: True
+  entropy_coef: 0.01
   optimizer:
     _target_: torch.optim.AdamW
-    lr: 5e-5
+    lr: 3e-5
 scheduler:
   _target_: core.scheduler.CosineAnnealingWarmupLR
   T_max: ${num_pseudo_epochs}

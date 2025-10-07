@@ -23,25 +23,27 @@ class ValueReinforceTrainer(BaseTrainer):
             model: ModelBase,
             optimizer: torch.optim.Optimizer=None,
             entropy=False,
-            entopy_coef=0.01,
+            entropy_coef=0.01,
+            value_coef=1,
             clip_value = 5,
         ):
         self.model = model
         self.optimizer = optimizer
         self.entropy = entropy
         if entropy:
-            self.entopy_coef = entopy_coef
+            self.entropy_coef = entropy_coef
         else:
-            self.entopy_coef = 0
+            self.entropy_coef = 0
         self.clip_value = clip_value
+        self.value_coef = value_coef
     
     def loss(self, state, action, reward, advantage, value_target):
         pred, entropy_loss, value = self.model.step(state, action, self.entropy)
 
         rl_loss = reinforce_loss(pred, advantage)
-        value_loss = ((value_target - value) ** 2).mean()
+        value_loss = self.value_coef * ((value_target - value) ** 2).mean()
 
-        loss = rl_loss + value_loss + entropy_loss * self.entopy_coef
+        loss = rl_loss + value_loss + entropy_loss * self.entropy_coef
 
         return loss, {
             "loss": loss.item(),

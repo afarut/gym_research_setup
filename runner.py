@@ -84,9 +84,10 @@ class Runner:
             if epoch % self.eval_freq == 0:
                 metrics = self.eval()
                 self.checkpointer.save(epoch, metrics)
-                self.model.train()
+                
 
             dataloader, metrics = self.data_miner.get_dataloader()
+            self.model.train()
             self.logger.log(metrics, prefix="train/")
 
             rollout_metrics = []

@@ -17,6 +17,7 @@ class SimpleDataMiner:
             alpha=0.95,
             gamma=0.99,
             device="cpu",
+            drop_last=False,
         ):
         assert batch_size > 1
         self.model = model
@@ -27,6 +28,7 @@ class SimpleDataMiner:
         self.device = device
         self.batch_size = batch_size
         self.eval_seeds = eval_seeds
+        self.drop_last = drop_last
 
     def gae(self, value: list, rewards: list, next_value: list) -> list:
         td_residual = []
@@ -103,7 +105,7 @@ class SimpleDataMiner:
             batch_size=self.batch_size,
             collate_fn=lambda x: collate_to_device(x, device=self.device),
             shuffle=True,
-            drop_last=False
+            drop_last=self.drop_last
         )
 
         return dataloader, metrics
