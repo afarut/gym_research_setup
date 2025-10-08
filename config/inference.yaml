@@ -1,7 +1,3 @@
-defaults:
-  - env/LunarLander@model_config: model_config
-  - env: LunarLander
-
 env:
   _target_: gymnasium.make
   render_mode: "human"

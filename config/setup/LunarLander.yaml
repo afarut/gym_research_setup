@@ -1,9 +1,8 @@
-hydra:
-  run:
-    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}-0
-  sweep:
-    dir: outputs/${now:%Y-%m-%d}
-    subdir: ${now:%H-%M-%S}-${hydra.job.num}
+# @package _global_
+defaults:
+  - /env/LunarLander@model_config: model_config
+  - /env: LunarLander/default
+
 
 model:
   hidden_dim: 512
@@ -11,9 +10,6 @@ model:
   out_dim: ${model_config.out_dim}
   _target_: ${model_config.model_path}
   device: ${device}
-logger:
-  _target_: logger.tensorboard.TensorBoardLogger
-  log_dir: ${hydra:runtime.output_dir}
 data_miner:
   _target_: core.dataminer.StepsDataMiner
   gamma: 0.99
@@ -23,13 +19,13 @@ data_miner:
   batch_size: 64
   device: ${device}
   num_steps: 1000
-  drop_last: True
+  drop_last: true
   eval_seeds: [424240, 424241, 424242, 424243, 424244, 424245, 424246, 424247, 424248, 424249, 424250]
 trainer:
   _target_: core.trainer.ValueReinforceTrainer
   model: ${model}
   value_coef: 1
-  entropy: True
+  entropy: true
   entropy_coef: 0.01
   optimizer:
     _target_: torch.optim.AdamW
@@ -40,12 +36,9 @@ scheduler:
   eta_min: 1e-6
   optimizer: ${trainer.optimizer}
   warmup_steps: 5
-seed: 42
 
+seed: 43
 num_pseudo_epochs: 5000
 eval_freq: 50
-tensorboard_port: 6006
-streamlit_port: 8501
 device: cpu
-save_checkpoint: True
 name:
