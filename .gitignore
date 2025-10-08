@@ -1,4 +1,5 @@
-**/env
+/env
+/venv
 **/saved_models
 **/outputs
 meta.json

@@ -18,7 +18,7 @@ python run_inference.py
   - Where `DATE` and `TIME` your path to launch
 ### Run train
 ```
-python run_train.py
+python run_train.py +setup=LunarLander
 ```
 - For mo details go to link
 ## Streamlit and TensorBoard
@@ -33,11 +33,11 @@ python run_clear.py
 ```
 ### How to run train from checkpoint?
 ```
-python run_train.py +checkpoint_path=outputs/DATE/TIME
+python run_train.py +setup=LunarLander +checkpoint_path=outputs/DATE/TIME
 ```
 - You can drop past information from tensorboard with `+checkpoint_drop_past=True`
   - If you use this flag, then will be use `best` model, else `last`
 ### How to run train without saving model? 
 ```
-python run_train.py +mode=debug
+python run_train.py +setup=LunarLander +mode=debug
 ```

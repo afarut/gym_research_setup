@@ -1,0 +1,3 @@
+id: "CartPole-v1"
+max_episode_steps: 1000
+_target_: gymnasium.make

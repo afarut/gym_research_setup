@@ -1,10 +1,5 @@
-import gymnasium as gym
 import torch
-from common.utils import stack_dict, collate_to_device, list_dict_extend, reinforce_loss
-from torch.utils.data import DataLoader
-from tqdm import tqdm
-import numpy as np
-import torch.nn.functional as F
+from common.utils import reinforce_loss
 from model.base import ModelBase
 
 
@@ -17,7 +12,7 @@ class BaseTrainer:
 
 
 class ValueReinforceTrainer(BaseTrainer):
-    """Reinforce with value function (using GAE)"""
+    """Reinforce with Value function (using GAE)"""
     def __init__(
             self,
             model: ModelBase,
@@ -36,14 +31,14 @@ class ValueReinforceTrainer(BaseTrainer):
             self.entropy_coef = 0
         self.clip_value = clip_value
         self.value_coef = value_coef
-    
+
     def loss(self, state, action, reward, advantage, value_target):
         pred, entropy_loss, value = self.model.step(state, action, self.entropy)
 
         rl_loss = reinforce_loss(pred, advantage)
-        value_loss = self.value_coef * ((value_target - value) ** 2).mean()
+        value_loss = ((value_target - value) ** 2).mean()
 
-        loss = rl_loss + value_loss + entropy_loss * self.entropy_coef
+        loss = rl_loss + value_loss * self.value_coef *  + entropy_loss * self.entropy_coef
 
         return loss, {
             "loss": loss.item(),
