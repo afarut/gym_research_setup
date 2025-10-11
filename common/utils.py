@@ -7,6 +7,7 @@ import os
 import signal
 import json
 import time
+import torch.nn as nn
 
 
 def stack_dict(data: dict, axis=0):
@@ -35,7 +36,6 @@ def reinforce_loss(pred: torch.Tensor, rewards: torch.Tensor):
 
 
 def is_port_running(port):
-    port = 8501
     url = f"http://127.0.0.1:{port}"
     try:
         r = requests.get(url)
@@ -49,17 +49,17 @@ def is_port_running(port):
 def kill_process_on_port(port: int):
     try:
         result = subprocess.check_output(
-            ["lsof", "-nP", "-i", f"TCP:{port}"]
+            ["lsof", "-nP", "-i", f"TCP:{port}", "+c", "15"]
         ).decode()
         for line in result.splitlines()[1:]:
             cols = line.split()
             pid = int(cols[1])
             cmd = cols[0]
-            if "tensorboard" in cmd.lower() or "python" in cmd.lower():
+            if "tensorboard" in cmd.lower() or "python" in cmd.lower() or "streamlit" in cmd.lower():
                 print(f"Killing {cmd} (PID {pid})...")
                 os.kill(pid, signal.SIGKILL)
             else:
-                print(f"Skipping {cmd} — not TensorBoard.")
+                print(f"Skipping {cmd}")
     except subprocess.CalledProcessError:
         print(f"No process found on port {port}.")
 
@@ -90,16 +90,29 @@ def restart_tensorboard(port):
             tmp.append(f"{run['alias']}:{run['run_id']}/")
     run_with_alias = ",".join(tmp)
 
-    if is_port_running(port):
-        kill_process_on_port(port)
+    kill_process_on_port(port)
     try:
         # Запуск TensorBoard в subprocess
         subprocess.Popen(
             ["tensorboard", "--logdir_spec", run_with_alias, "--port", str(port)],
-            # "--logdir_spec exp1:/path/to/run1,exp2:/path/to/run2"
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
         return f"TensorBoard запущен на порту {port}", False
     except Exception as e:
         return f"Ошибка запуска TensorBoard: {e}", True
+
+
+def build_mlp(input_dim, hidden_dim, depth, output_dim=None, activation="ReLU", normalization="LayerNorm"):
+    layers = []
+    act = getattr(nn, activation)
+    norm = getattr(nn, normalization)
+    prev_dim = input_dim
+    for _ in range(depth):
+        layers.append(nn.Linear(prev_dim, hidden_dim))
+        layers.append(act())
+        layers.append(norm(hidden_dim))
+        prev_dim = hidden_dim
+    if output_dim is not None:
+        layers.append(nn.Linear(prev_dim, output_dim))
+    return nn.Sequential(*layers)

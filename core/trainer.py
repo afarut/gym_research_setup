@@ -1,44 +1,76 @@
 import torch
 from common.utils import reinforce_loss
-from model.base import ModelBase
+from model.base import AutoModel
 
 
 class BaseTrainer:
-    def step(self, *args, **kwargs):
-        raise NotImplementedError
+    def __init__(
+            self,
+            *,
+            model: AutoModel,
+            optimizer: torch.optim.Optimizer=None,
+            entropy_coef=0.01,
+        ):
+        self.model = model
+        self.optimizer = optimizer
+        self.entropy_coef = entropy_coef
+
+    def step(self, **kwargs):
+        loss, metrics = self.loss(**kwargs)
+
+        self.optimizer.zero_grad()
+
+        loss.backward()
+
+        metrics.update(self.model.clip())
+
+        self.optimizer.step()
+
+        return metrics
 
     def loss(self, *args, **kwargs):
         raise NotImplementedError
 
 
-class ValueReinforceTrainer(BaseTrainer):
-    """Reinforce with Value function (using GAE)"""
+class ReinforceTrainer(BaseTrainer):
+    def __init__(
+        self,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+
+    def loss(self, state, action, advantage, *args, **kwargs):
+        pred, entropy_loss, _ = self.model.step(state, action)
+
+        rl_loss = -(pred * advantage).mean()
+
+        loss = rl_loss + entropy_loss * self.entropy_coef
+
+        return loss, {
+            "loss": loss.item(),
+            "rl_loss": rl_loss.item(),
+            "entropy_loss": entropy_loss.item(),
+        }
+
+
+class A2CTrainer(BaseTrainer):
+    """Reinforce with Value function"""
     def __init__(
             self,
-            model: ModelBase,
-            optimizer: torch.optim.Optimizer=None,
-            entropy=False,
-            entropy_coef=0.01,
-            value_coef=1,
-            clip_value = 5,
+            *,
+            value_coef,
+            **kwargs,
         ):
-        self.model = model
-        self.optimizer = optimizer
-        self.entropy = entropy
-        if entropy:
-            self.entropy_coef = entropy_coef
-        else:
-            self.entropy_coef = 0
-        self.clip_value = clip_value
+        super().__init__(**kwargs)
         self.value_coef = value_coef
 
-    def loss(self, state, action, reward, advantage, value_target):
-        pred, entropy_loss, value = self.model.step(state, action, self.entropy)
+    def loss(self, state, action, advantage, value_target, *args, **kwargs):
+        pred, entropy_loss, value = self.model.step(state, action)
 
-        rl_loss = reinforce_loss(pred, advantage)
+        rl_loss = -(pred * advantage).mean()
         value_loss = ((value_target - value) ** 2).mean()
 
-        loss = rl_loss + value_loss * self.value_coef *  + entropy_loss * self.entropy_coef
+        loss = rl_loss + value_loss * self.value_coef + entropy_loss * self.entropy_coef
 
         return loss, {
             "loss": loss.item(),
@@ -46,16 +78,3 @@ class ValueReinforceTrainer(BaseTrainer):
             "value_loss": value_loss.item(),
             "entropy_loss": entropy_loss.item(),
         }
-
-    def step(self, state, action, reward, advantage, value_target):
-        loss, metrics = self.loss(state, action, reward, advantage, value_target)
-
-        self.optimizer.zero_grad()
-
-        loss.backward()
-        clipped_value = torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip_value)
-        metrics["grad_norm"] = clipped_value.item()
-
-        self.optimizer.step()
-
-        return metrics

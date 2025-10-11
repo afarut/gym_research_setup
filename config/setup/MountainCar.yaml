@@ -22,7 +22,7 @@ data_miner:
   drop_last: true
   eval_seeds: [424240, 424241, 424242, 424243, 424244, 424245, 424246, 424247, 424248, 424249, 424250]
 trainer:
-  _target_: core.trainer.ValueReinforceTrainer
+  _target_: core.trainer.A2CTrainer
   model: ${model}
   value_coef: 1
   entropy: true
@@ -30,12 +30,6 @@ trainer:
   optimizer:
     _target_: torch.optim.AdamW
     lr: 3e-5
-scheduler:
-  _target_: core.scheduler.CosineAnnealingWarmupLR
-  T_max: ${num_pseudo_epochs}
-  eta_min: 1e-6
-  optimizer: ${trainer.optimizer}
-  warmup_steps: 5
 
 seed: 43
 num_pseudo_epochs: 500

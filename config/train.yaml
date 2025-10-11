@@ -5,45 +5,21 @@ hydra:
     dir: outputs/${now:%Y-%m-%d}
     subdir: ${now:%H-%M-%S}-${hydra.job.num}
 
-model:
-  hidden_dim: 512
-  in_dim: ${model_config.in_dim}
-  out_dim: ${model_config.out_dim}
-  _target_: ${model_config.model_path}
-  device: ${device}
 logger:
   _target_: logger.tensorboard.TensorBoardLogger
   log_dir: ${hydra:runtime.output_dir}
-data_miner:
-  _target_: core.dataminer.StepsDataMiner
-  gamma: 0.99
-  alpha: 0.9
-  model: ${model}
-  env: ${env}
-  batch_size: 64
-  device: ${device}
-  num_steps: 1000
-  drop_last: True
-  eval_seeds: [424240, 424241, 424242, 424243, 424244, 424245, 424246, 424247, 424248, 424249, 424250]
-trainer:
-  _target_: core.trainer.ValueReinforceTrainer
-  model: ${model}
-  value_coef: 1
-  entropy: True
-  entropy_coef: 0.01
-  optimizer:
-    _target_: torch.optim.AdamW
-    lr: 3e-5
 scheduler:
   _target_: core.scheduler.CosineAnnealingWarmupLR
   T_max: ${num_pseudo_epochs}
   eta_min: 1e-6
   optimizer: ${trainer.optimizer}
   warmup_steps: 5
+data_miner:
+  eval_seeds: [424240, 424241, 424242, 424243, 424244, 424245, 424246, 424247, 424248, 424249, 424250]
+  drop_last: true
+
 seed: 42
 
-num_pseudo_epochs: 5000
-eval_freq: 50
 tensorboard_port: 6006
 streamlit_port: 8501
 device: cpu

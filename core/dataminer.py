@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
-from model.base import ModelBase
+from model.base import AutoModel
 from gymnasium import Env
 from common.utils import stack_dict, collate_to_device, list_dict_extend, reinforce_loss
 
@@ -9,7 +9,7 @@ from common.utils import stack_dict, collate_to_device, list_dict_extend, reinfo
 class SimpleDataMiner:
     def __init__(
             self, 
-            model: ModelBase, 
+            model: AutoModel, 
             env: Env,
             batch_size,
             eval_seeds,

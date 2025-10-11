@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from model.base import ModelBase
+from model.base import AutoModel
 from gymnasium import Env
 from hydra.utils import instantiate
 from logger.base import LoggerBase
@@ -14,7 +14,7 @@ from core.checkpoint import CheckPointer
 class Runner:
     def __init__(
             self, 
-            model: ModelBase, 
+            model: AutoModel, 
             env: Env,
             logger: LoggerBase,
             trainer: BaseTrainer,
@@ -93,7 +93,12 @@ class Runner:
             rollout_metrics = []
 
             for state, action, reward, advantage, value_target in dataloader:
-                metrics = self.trainer.step(state, action, reward, advantage, value_target)
+                metrics = self.trainer.step(
+                    state=state, 
+                    action=action, 
+                    advantage=advantage, 
+                    value_target=value_target
+                )
                 metrics = {key: [val] for key, val in metrics.items()}
                 rollout_metrics.append(metrics)
 
@@ -122,10 +127,15 @@ class Runner:
         rollout_metrics = []
 
         for state, action, reward, advantage, value_target in dataloader:
-            _, metrics = self.trainer.loss(state, action, reward, advantage, value_target)
+            _, metrics = self.trainer.loss(
+                state=state, 
+                action=action, 
+                advantage=advantage, 
+                value_target=value_target
+            )
             metrics = {key: [val] for key, val in metrics.items()}
             rollout_metrics.append(metrics)
-        
+
         rollout_metrics = stack_dict(
             list_dict_extend(
                 rollout_metrics
@@ -140,7 +150,7 @@ class Runner:
 class Inference:
     def __init__(
         self, 
-        model: ModelBase, 
+        model: AutoModel, 
         env: Env,
         data_miner: SimpleDataMiner,
         checkpoint_path=None,

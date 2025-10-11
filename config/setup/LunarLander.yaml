@@ -1,15 +1,16 @@
 # @package _global_
 defaults:
-  - /env/LunarLander@model_config: model_config
+  - /env/LunarLander/model_config
   - /env: LunarLander/default
 
 
 model:
   hidden_dim: 512
-  in_dim: ${model_config.in_dim}
-  out_dim: ${model_config.out_dim}
-  _target_: ${model_config.model_path}
   device: ${device}
+  body_depth: 2
+  head_depth: 1
+  value_depth: 1
+  _target_: model.base.AutoModel
 data_miner:
   _target_: core.dataminer.StepsDataMiner
   gamma: 0.99
@@ -19,10 +20,8 @@ data_miner:
   batch_size: 64
   device: ${device}
   num_steps: 1000
-  drop_last: true
-  eval_seeds: [424240, 424241, 424242, 424243, 424244, 424245, 424246, 424247, 424248, 424249, 424250]
 trainer:
-  _target_: core.trainer.ValueReinforceTrainer
+  _target_: core.trainer.A2CTrainer
   model: ${model}
   value_coef: 1
   entropy: true
@@ -30,15 +29,8 @@ trainer:
   optimizer:
     _target_: torch.optim.AdamW
     lr: 3e-5
-scheduler:
-  _target_: core.scheduler.CosineAnnealingWarmupLR
-  T_max: ${num_pseudo_epochs}
-  eta_min: 1e-6
-  optimizer: ${trainer.optimizer}
-  warmup_steps: 5
 
-seed: 43
-num_pseudo_epochs: 5000
-eval_freq: 50
+seed: 42
+num_pseudo_epochs: 800
+eval_freq: 10
 device: cpu
-name:

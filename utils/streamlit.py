@@ -41,7 +41,6 @@ if st.button("Сохранить"):
         json.dump(runs_meta, f, indent=2)
     st.success("Alias и Visible обновлены!")
 
-    logdir = f"logs/{run['run_id']}"  # Путь к логам TensorBoard
     cfg = OmegaConf.load("config/train.yaml")
     port = cfg["tensorboard_port"]
     

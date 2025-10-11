@@ -1,0 +1,2 @@
+id: "InvertedPendulum-v5"
+_target_: gymnasium.make

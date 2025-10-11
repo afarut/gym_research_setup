@@ -12,7 +12,7 @@ pip install -r requirements.txt
 - Better will be use with virtual env
 ### Run inference
 ```
-python run_inference.py
+python run_inference.py +setup=LunarLander
 ```
 - You can inference from checkpoint with `python run_inference.py +checkpoint_path=outputs/DATE/TIME`
   - Where `DATE` and `TIME` your path to launch

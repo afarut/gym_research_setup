@@ -1,7 +1,7 @@
 import os
 import torch
 import shutil
-from model.base import ModelBase
+from model.base import AutoModel
 from gymnasium import Env
 from logger.base import LoggerBase
 from pathlib import Path
@@ -13,7 +13,7 @@ from tensorboard.backend.event_processing import event_accumulator
 class CheckPointer:
     def __init__(
         self,
-        model: ModelBase,
+        model: AutoModel,
         optimizer: torch.optim.Optimizer,
         env: Env,
         logger: LoggerBase,
