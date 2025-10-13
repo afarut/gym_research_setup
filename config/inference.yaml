@@ -1,4 +1,15 @@
 env:
   render_mode: "human"
 
+model:
+  device: ${device}
+  _target_: model.base.AutoModel
+data_miner:
+  eval_seeds: [424240, 424241, 424242, 424243, 424244, 424245, 424246, 424247, 424248, 424249, 424250]
+  drop_last: true
+  model: ${model}
+  env: ${env}
+  device: ${device}
+  _target_: core.dataminer.StepsDataMiner
+
 device: cpu

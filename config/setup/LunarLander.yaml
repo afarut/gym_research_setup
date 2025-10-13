@@ -6,31 +6,19 @@ defaults:
 
 model:
   hidden_dim: 512
-  device: ${device}
   body_depth: 2
   head_depth: 1
   value_depth: 1
-  _target_: model.base.AutoModel
 data_miner:
-  _target_: core.dataminer.StepsDataMiner
   gamma: 0.99
   alpha: 0.9
-  model: ${model}
-  env: ${env}
   batch_size: 64
-  device: ${device}
   num_steps: 1000
 trainer:
   _target_: core.trainer.A2CTrainer
-  model: ${model}
   value_coef: 1
-  entropy: true
-  entropy_coef: 0.01
   optimizer:
-    _target_: torch.optim.AdamW
     lr: 3e-5
 
-seed: 42
 num_pseudo_epochs: 800
 eval_freq: 10
-device: cpu

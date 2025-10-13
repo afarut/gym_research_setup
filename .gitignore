@@ -4,3 +4,4 @@
 **/outputs
 meta.json
 **/__pycache__
+/isaacgym

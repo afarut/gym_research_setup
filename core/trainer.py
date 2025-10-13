@@ -40,9 +40,9 @@ class ReinforceTrainer(BaseTrainer):
         super().__init__(**kwargs)
 
     def loss(self, state, action, advantage, *args, **kwargs):
-        pred, entropy_loss, _ = self.model.step(state, action)
+        log_prob, entropy_loss, _ = self.model.step(state, action)
 
-        rl_loss = -(pred * advantage).mean()
+        rl_loss = -(log_prob * advantage).mean()
 
         loss = rl_loss + entropy_loss * self.entropy_coef
 
@@ -65,9 +65,9 @@ class A2CTrainer(BaseTrainer):
         self.value_coef = value_coef
 
     def loss(self, state, action, advantage, value_target, *args, **kwargs):
-        pred, entropy_loss, value = self.model.step(state, action)
+        log_prob, entropy_loss, value = self.model.step(state, action)
 
-        rl_loss = -(pred * advantage).mean()
+        rl_loss = -(log_prob * advantage).mean()
         value_loss = ((value_target - value) ** 2).mean()
 
         loss = rl_loss + value_loss * self.value_coef + entropy_loss * self.entropy_coef

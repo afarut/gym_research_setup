@@ -12,10 +12,11 @@ class AutoModel(nn.Module):
         hidden_dim, 
         out_dim,
         device,
-        discrete=True,
-        body_depth=1,
-        value_depth=1,
-        head_depth=1,
+        discrete,
+        body_depth,
+        value_depth,
+        head_depth,
+        activation,
         clip_value=5,
         *args,
         **kwargs
@@ -35,8 +36,9 @@ class AutoModel(nn.Module):
             self.body = build_mlp(
                 input_dim=self.in_dim, 
                 hidden_dim=self.hidden_dim, 
-                depth=self.body_depth
-            )
+                depth=self.body_depth,
+                activation=activation,
+            ).to(device)
         else:
             self.body = nn.Sequential()
 
@@ -45,19 +47,21 @@ class AutoModel(nn.Module):
             input_dim=self.hidden_dim if self.body_depth > 0 else self.in_dim,
             hidden_dim=self.hidden_dim, 
             output_dim=self.out_dim * (int(not self.discrete) + 1),
-            depth=self.head_depth
-        )
+            depth=self.head_depth,
+            activation=activation,
+        ).to(device)
 
         if self.value_depth > 0:
             self.value = build_mlp(
-            input_dim=self.hidden_dim if self.body_depth > 0 else self.in_dim,
-            hidden_dim=self.hidden_dim,
-            output_dim=1,
-            depth=self.value_depth
-        )
+                input_dim=self.hidden_dim if self.body_depth > 0 else self.in_dim,
+                hidden_dim=self.hidden_dim,
+                output_dim=1,
+                depth=self.value_depth,
+                activation=activation,
+            ).to(device)
         else:
-            self.value = lambda x: 0
-        
+            self.value = lambda x: (x.detach() * 0).mean(dim=-1)
+    
         print("Body:", self.body)
         print("RL head:", self.head)
         print("Value head:", self.value)
@@ -68,8 +72,9 @@ class AutoModel(nn.Module):
             clipped_value = torch.nn.utils.clip_grad_norm_(self.parameters(), self.clip_value)
             metrics["grad_norm"] = clipped_value.item()
         else:
-            clipped_value = torch.nn.utils.clip_grad_norm_(self.value.parameters(), self.clip_value)
-            metrics["value_head_grad_norm"] = clipped_value.item()
+            if self.value_depth > 0:
+                clipped_value = torch.nn.utils.clip_grad_norm_(self.value.parameters(), self.clip_value)
+                metrics["value_head_grad_norm"] = clipped_value.item()
             clipped_value = torch.nn.utils.clip_grad_norm_(self.head.parameters(), self.clip_value)
             metrics["rl_head_grad_norm"] = clipped_value.item()
         return metrics
@@ -83,7 +88,8 @@ class AutoModel(nn.Module):
             state = torch.tensor(state, device=self.device, dtype=torch.float32).unsqueeze(0)
         assert len(state.shape) == 2 and state.shape[0] == 1 # batch_size == 1
 
-        pred, value = self.__call__(state)
+        with torch.no_grad():
+            pred, value = self.__call__(state)
         pred = pred.squeeze()
         value = value.squeeze()
         if self.discrete:
@@ -91,24 +97,26 @@ class AutoModel(nn.Module):
             result = distribution.sample().item()
         else:
             pred = pred.reshape(-1, 2)
-            result = []
-            for i in range(self.out_dim):
-                distribution = dist.Normal(loc=pred[i, 0], scale=pred[i, 1])
-                result.append(distribution.sample().item())
+            distribution = dist.Normal(loc=pred[..., 0], scale=(pred[..., 1] * 0.5).exp())
+            result = distribution.sample().tolist()
         return result, value.item()
 
     def step(self, state: torch.Tensor, action: torch.Tensor):
-        assert len(action.shape) == 1
+        assert len(action.shape) == (1 + int(not self.discrete))
+        batch_size = action.shape[0]
 
         pred, value = self.__call__(state)
-        pred = pred.log_softmax(dim=-1)
         value = value.squeeze()
+
         if self.discrete:
-            pred_action_logit = pred[torch.arange(pred.size(0)), action]
-
+            log_probs = pred.log_softmax(dim=-1)
+            log_prob = log_probs[torch.arange(pred.size(0)), action]
             probs = F.softmax(pred, dim=-1)
-            entropy_loss = (probs * F.log_softmax(pred, dim=-1)).sum(dim=-1).mean()
-
-            return pred_action_logit, entropy_loss, value
+            entropy_loss = (probs * log_probs).sum(dim=-1).mean()
         else:
-            entropies = []
+            pred = pred.reshape(batch_size, -1, 2)
+            distribution = dist.Normal(loc=pred[..., 0], scale=(pred[..., 1] * 0.5).exp())
+            log_prob = distribution.log_prob(action)
+            entropy_loss = -distribution.entropy().mean()
+
+        return log_prob, entropy_loss, value

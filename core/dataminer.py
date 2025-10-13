@@ -64,7 +64,7 @@ class SimpleDataMiner:
         while not (terminated or truncated):
             action, value = self.model.sample(observation)
 
-            trajectory["state"].append(observation)
+            trajectory["state"].append(observation.astype(np.float32))
             trajectory["action"].append(action)
             trajectory["value"].append(value)
 
@@ -76,8 +76,8 @@ class SimpleDataMiner:
         trajectory["next_value"] = trajectory["value"].copy() + [0]
         trajectory["next_value"].pop(0)
         trajectory["advantage"] = self.gae(
-            trajectory["value"], 
-            trajectory["reward"], 
+            trajectory["value"],
+            trajectory["reward"],
             trajectory["next_value"]
         )
         trajectory["value_target"] = self.get_value_target(trajectory["reward"])
@@ -101,7 +101,7 @@ class SimpleDataMiner:
                     trajectories["advantage"],
                     trajectories["value_target"]
                 )
-            ), 
+            ),
             batch_size=self.batch_size,
             collate_fn=lambda x: collate_to_device(x, device=self.device),
             shuffle=True,

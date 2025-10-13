@@ -4,5 +4,4 @@
 model:
   in_dim: 4
   out_dim: 1
-  _target_: model.InvertedPendulum.model.InvertedPendulum
   discrete: False

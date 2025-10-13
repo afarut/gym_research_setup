@@ -17,9 +17,21 @@ scheduler:
 data_miner:
   eval_seeds: [424240, 424241, 424242, 424243, 424244, 424245, 424246, 424247, 424248, 424249, 424250]
   drop_last: true
+  model: ${model}
+  env: ${env}
+  device: ${device}
+  _target_: core.dataminer.StepsDataMiner
+model:
+  device: ${device}
+  activation: ReLU
+  _target_: model.base.AutoModel
+trainer:
+  model: ${model}
+  entropy_coef: 0.01
+  optimizer:
+    _target_: torch.optim.AdamW
 
 seed: 42
-
 tensorboard_port: 6006
 streamlit_port: 8501
 device: cpu

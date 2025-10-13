@@ -1,23 +1,25 @@
 # @package _global_
 defaults:
-  - /env: CartPole/default
-  - /env/CartPole/model_config
+  - /env: InvertedPendulum/default
+  - /env/InvertedPendulum/model_config
 
 
 model:
-  hidden_dim: 32
+  hidden_dim: 64
   body_depth: 0
   head_depth: 2
   value_depth: 0
+  activation: Tanh
 data_miner:
   gamma: 0.99
   alpha: 1
-  batch_size: 64
-  num_steps: 1000
+  batch_size: 256
+  num_steps: 4096
 trainer:
   _target_: core.trainer.ReinforceTrainer
+  entropy_coef: 0
   optimizer:
-    lr: 1e-4
+    lr: 3e-5
 
-num_pseudo_epochs: 200
+num_pseudo_epochs: 500
 eval_freq: 10
