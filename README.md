@@ -1,22 +1,66 @@
 # Gym Research Setup
-This project is needed for quick and convenient testing of hypothesis at the gymnasium.
+This project is needed for quick and convenient testing of hypothesis at the gymnasium (and IsaacGym).
 ## Quick start
 ### Important
 Before launch this project make sure that true ports are indicate for TensorBoard and Streamlit in `train.yaml`.
 - If something runs in this ports, then it will be kills
 - Config name for this ports are `tensorboard_port` and `streamlit_port`
-### Install requirements
+### Setting up the environment
+Download and unzip the [archive](https://developer.nvidia.com/isaac-gym/download) into `isaacgym/`
+#### IsaacGym Dockerfile
+Add this command at the end `isaacgym/docker/Dockerfile`
+- `RUN cd isaacgym/IsaacGymEnvs && pip install -q -e .`
+- `RUN pip install -r requirements.txt `
+#### IsaacGym run.sh
+Edit your `isaacgym/docker/run.sh` so it looks something like this:
+```bash
+#!/bin/bash
+set -e
+set -u
+
+
+if [ $# -eq 0 ]
+then
+    echo "running docker without display"
+    docker run -it --network=host --gpus=all --name=isaacgym_container isaacgym /bin/bash
+else
+    export DISPLAY=$DISPLAY
+	echo "setting display to $DISPLAY"
+	xhost +
+	docker run -it --rm -v /tmp/.X11-unix:/tmp/.X11-unix -v $(pwd):/opt/isaacgym -e DISPLAY=$DISPLAY --network=host --gpus=all -p 6006:6006 -p 8501:8501 --name=isaacgym_container isaacgym /bin/bash
+	xhost -
+fi
 ```
-pip install -r requirements.txt
+#### IsaacGym build.sh
+Edit your `isaacgym/docker/build.sh` so it looks something like this:
+```bash
+#!/bin/bash
+set -e
+set -u
+
+if [ ! -d "./isaacgym/IsaacGymEnvs" ]; then
+	git clone https://github.com/isaac-sim/IsaacGymEnvs ./isaacgym/IsaacGymEnvs
+fi
+
+docker build --network host -t isaacgym -f isaacgym/docker/Dockerfile .
 ```
-- Better will be use with virtual env
-### Run inference
+### Build env
+```
+sh isaacgym/docker/build.sh
+```
+- It must to do only once
+### Connect to env
+```
+sh isaacgym/docker/run.sh
+```
+
+### Run inference in container
 ```
 python run_inference.py +setup=LunarLander
 ```
 - You can inference from checkpoint with `python run_inference.py +checkpoint_path=outputs/DATE/TIME`
   - Where `DATE` and `TIME` your path to launch
-### Run train
+### Run train in container
 ```
 python run_train.py +setup=LunarLander
 ```

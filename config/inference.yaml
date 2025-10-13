@@ -3,6 +3,7 @@ env:
 
 model:
   device: ${device}
+  activation: ReLU
   _target_: model.base.AutoModel
 data_miner:
   eval_seeds: [424240, 424241, 424242, 424243, 424244, 424245, 424246, 424247, 424248, 424249, 424250]

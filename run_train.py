@@ -20,7 +20,7 @@ def my_app(cfg: DictConfig):
         print("Если это не streamlit, то измените streamlit_port для запуска")
     else:
         process = subprocess.Popen(
-            ["streamlit", "run", "utils/streamlit.py", f"--server.port={cfg['streamlit_port']}"],
+            ["streamlit", "run", "utils/streamlit.py", f"--server.port={cfg['streamlit_port']}", "--server.headless" ,"true"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             stdin=subprocess.DEVNULL,
