@@ -1,24 +1,44 @@
 # @package _global_
-defaults:
-  - /env/LunarLander/model_config
-  - /env: LunarLander/default
 
-
+env:
+  id: "LunarLander-v3"
+  _target_: gymnasium.make_vec
+  num_envs: 16
+  vectorization_mode: async
 model:
-  hidden_dim: 512
-  body_depth: 2
-  head_depth: 1
-  value_depth: 1
+  hidden_dim: 128
+  # body:
+  #   _target_: common.utils.build_mlp
+  #   input_dim: 8
+  #   hidden_dim: ${model.hidden_dim}
+  #   depth: 4
+  #   activation: Tanh
+  head:
+    _target_: model.head.DiscreteHead
+    input_dim: 8
+    hidden_dim: ${model.hidden_dim}
+    output_dim: 4
+    activation: Tanh
+    depth: 2
+  value:
+    _target_: common.utils.build_mlp
+    input_dim: 8
+    hidden_dim: ${model.hidden_dim}
+    output_dim: 1
+    depth: 3
+    activation: ELU
 data_miner:
   gamma: 0.99
-  alpha: 0.9
-  batch_size: 64
-  num_steps: 1000
+  alpha: 1
+  batch_size: 512
+  num_steps: 512
+  _target_: core.dataminer.ClassicDataMiner
 trainer:
   _target_: core.trainer.A2CTrainer
-  value_coef: 1
   optimizer:
-    lr: 3e-5
+    lr: 5e-5
+  entropy_coef: 0
+  value_coef: 1
 
-num_pseudo_epochs: 800
+num_pseudo_epochs: 200
 eval_freq: 10

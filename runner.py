@@ -1,3 +1,5 @@
+import isaacgym
+import isaacgymenvs # type: ignore
 import torch
 import numpy as np
 from model.base import AutoModel
@@ -81,23 +83,19 @@ class Runner:
 
     def train(self):
         for epoch in tqdm(range(self.checkpoint_epochs, self.num_pseudo_epochs)):
-            if epoch % self.eval_freq == 0:
-                metrics = self.eval()
-                self.checkpointer.save(epoch, metrics)
-                
 
-            dataloader, metrics = self.data_miner.get_dataloader()
+            dataloader, data_metrics = self.data_miner.get_dataloader()
             self.model.train()
-            self.logger.log(metrics, prefix="train/")
 
             rollout_metrics = []
 
-            for state, action, reward, advantage, value_target in dataloader:
+            for state, action, reward, advantage, value_target, log_prob in dataloader:
                 metrics = self.trainer.step(
                     state=state, 
                     action=action, 
                     advantage=advantage, 
-                    value_target=value_target
+                    value_target=value_target,
+                    log_prob=log_prob,
                 )
                 metrics = {key: [val] for key, val in metrics.items()}
                 rollout_metrics.append(metrics)
@@ -111,9 +109,16 @@ class Runner:
             lr = metrics["learning rate"] = self.scheduler.get_last_lr()[0]
 
             self.logger.log({"learning rate": lr}, prefix="train/")
-            self.logger.log({key: val.mean() for key, val in rollout_metrics.items()}, prefix="train/")
 
+            metrics = {key: val.mean() for key, val in rollout_metrics.items()}
+
+            metrics.update(data_metrics)
+
+            self.logger.log(metrics, prefix="train/")
+            
             self.scheduler.step()
+            if epoch % self.eval_freq == 0:
+                self.checkpointer.save(epoch, metrics)
 
         self.checkpointer.save_checkpoint(self.num_pseudo_epochs, "last")
         self.logger.close()
@@ -150,7 +155,7 @@ class Runner:
 class Inference:
     def __init__(
         self, 
-        model: AutoModel, 
+        model: AutoModel,
         env: Env,
         data_miner: SimpleDataMiner,
         checkpoint_path=None,
@@ -159,6 +164,8 @@ class Inference:
         *args,
         **kwargs
     ):
+        
+        torch.manual_seed(42)
         self.model = instantiate(model)
         self.env = instantiate(env)
         self.data_miner = instantiate(data_miner, model=self.model, env=self.env)
@@ -183,4 +190,5 @@ class Inference:
             self.seed = seed
 
     def run(self):
-        self.data_miner.get_trajectory(seed=self.seed)
+        _, metrics = self.data_miner.get_dataloader()
+        print(metrics)

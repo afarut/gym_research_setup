@@ -7,7 +7,11 @@ from runner import Inference
 
 @hydra.main(version_base=None, config_path='config', config_name='inference')
 def my_app(cfg: DictConfig):
-    print(OmegaConf.to_yaml(cfg))
+    with open_dict(cfg):
+        if "headless" in cfg["env"]:
+            cfg["env"]["headless"] = False
+            del cfg["env"]["render_mode"]
+    print(OmegaConf.to_yaml(cfg, resolve=True))
     runner = Inference(**cfg)
     runner.run()
 

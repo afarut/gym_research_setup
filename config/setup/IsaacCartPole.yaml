@@ -1,10 +1,10 @@
 # @package _global_
+defaults:
+  - /env: IsaacGym
 
 env:
-  id: "InvertedPendulum-v5"
-  _target_: gymnasium.make_vec
+  task: Cartpole
   num_envs: 8
-  vectorization_mode: sync
 model:
   _target_: model.base.AutoModel
   head:
@@ -19,13 +19,12 @@ data_miner:
   alpha: 1
   batch_size: 256
   num_steps: 512
-  _target_: core.dataminer.ClassicDataMiner
+  _target_: core.dataminer.IsaacDataMiner
 trainer:
   _target_: core.trainer.ReinforceTrainer
   optimizer:
     lr: 1e-4
   entropy_coef: 0
-  # value_coef: 0.2
 
 num_pseudo_epochs: 500
 eval_freq: 10

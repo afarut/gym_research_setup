@@ -49,7 +49,7 @@ class CheckPointer:
         path = "saved_models" + path
 
         checkpoint = torch.load(path + f"/{prefix}/model.pth", map_location=self.model.device)
-        self.model.load_state_dict(checkpoint["model_state_dict"])
+        missing, unexpected = self.model.load_state_dict(checkpoint["model_state_dict"])
 
         if not self.only_model:
             checkpoint = torch.load(path + f"/{prefix}/optimizer.pth", map_location=self.model.device)
@@ -120,3 +120,30 @@ class CheckPointer:
             "epoch": epoch,
         }
         torch.save(checkpoint, self.path + f"/{prefix}/meta.pth")
+
+
+
+
+
+
+
+# saved_models/2025-10-17/14-10-21-0//last/model.pth
+# body.0.weight tensor(3.6804)
+# body.0.bias tensor(1.6123)
+# body.2.weight tensor(5.6973)
+# body.2.bias tensor(0.2829)
+# scale_head.weight tensor(0.8370)
+# scale_head.bias tensor(0.0346)
+# std_head.weight tensor(0.7005)
+# std_head.bias tensor(0.0897)
+
+
+# saved_models/2025-10-17/14-10-21-0//last/model.pth
+# body.0.weight tensor(3.6804)
+# body.0.bias tensor(1.6123)
+# body.2.weight tensor(5.6973)
+# body.2.bias tensor(0.2829)
+# scale_head.weight tensor(0.8370)
+# scale_head.bias tensor(0.0346)
+# std_head.weight tensor(0.7005)
+# std_head.bias tensor(0.0897)

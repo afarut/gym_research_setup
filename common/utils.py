@@ -1,3 +1,6 @@
+import isaacgym
+import isaacgymenvs # type: ignore
+import torch
 import numpy as np
 import torch
 from collections import defaultdict
@@ -108,11 +111,14 @@ def build_mlp(input_dim, hidden_dim, depth, output_dim=None, activation="ReLU", 
     act = getattr(nn, activation)
     norm = getattr(nn, normalization)
     prev_dim = input_dim
+
     for _ in range(depth):
         layers.append(nn.Linear(prev_dim, hidden_dim))
         layers.append(act())
         layers.append(norm(hidden_dim))
         prev_dim = hidden_dim
+    
     if output_dim is not None:
         layers.append(nn.Linear(prev_dim, output_dim))
+
     return nn.Sequential(*layers)

@@ -10,7 +10,8 @@ Download and unzip the [archive](https://developer.nvidia.com/isaac-gym/download
 #### IsaacGym Dockerfile
 Add this command at the end `isaacgym/docker/Dockerfile`
 - `RUN cd isaacgym/IsaacGymEnvs && pip install -q -e .`
-- `RUN pip install -r requirements.txt `
+- `
+RUN pip install --no-cache-dir --use-deprecated=legacy-resolver -r requirements.txt`
 #### IsaacGym run.sh
 Edit your `isaacgym/docker/run.sh` so it looks something like this:
 ```bash
@@ -51,7 +52,7 @@ sh isaacgym/docker/build.sh
 - It must to do only once
 ### Connect to env
 ```
-sh isaacgym/docker/run.sh
+sh isaacgym/docker/run.sh :0
 ```
 
 ### Run inference in container

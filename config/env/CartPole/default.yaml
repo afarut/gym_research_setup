@@ -1,2 +1,0 @@
-id: "CartPole-v1"
-_target_: gymnasium.make

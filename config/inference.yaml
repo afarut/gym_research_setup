@@ -1,6 +1,3 @@
-env:
-  render_mode: "human"
-
 model:
   device: ${device}
   activation: ReLU
@@ -12,5 +9,9 @@ data_miner:
   env: ${env}
   device: ${device}
   _target_: core.dataminer.StepsDataMiner
+env:
+  render_mode: human
+  vectorization_mode: sync
 
 device: cpu
+env_type: classic

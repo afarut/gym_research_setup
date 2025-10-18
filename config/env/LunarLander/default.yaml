@@ -1,3 +1,0 @@
-id: "LunarLander-v3"
-max_episode_steps: 1000
-_target_: gymnasium.make

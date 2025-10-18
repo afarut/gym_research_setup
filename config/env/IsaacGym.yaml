@@ -1,0 +1,21 @@
+# @package _global_
+
+env:
+  _target_: isaacgymenvs.make
+  sim_device: ${device}
+  rl_device: ${device}
+  graphics_device_id: 0
+  headless: True
+  seed: 0
+  num_envs: 1
+  # force_render: False
+# data_miner:
+#   _target_: core.dataminer.IsaacDataMiner
+
+  
+device: cuda
+
+hydra:
+  runtime:
+    choices:
+      task: ${env.task}
