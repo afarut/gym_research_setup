@@ -5,3 +5,4 @@
 meta.json
 **/__pycache__
 /isaacgym
+*.xml
