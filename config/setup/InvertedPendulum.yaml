@@ -4,7 +4,7 @@ env:
   id: "InvertedPendulum-v5"
   _target_: gymnasium.make_vec
   num_envs: 8
-  vectorization_mode: sync
+  vectorization_mode: async
 model:
   _target_: model.base.AutoModel
   head:

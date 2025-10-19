@@ -10,7 +10,9 @@ def my_app(cfg: DictConfig):
     with open_dict(cfg):
         if "headless" in cfg["env"]:
             cfg["env"]["headless"] = False
+            cfg["env"]["force_render"] = True
             del cfg["env"]["render_mode"]
+            del cfg["env"]["vectorization_mode"]
     print(OmegaConf.to_yaml(cfg, resolve=True))
     runner = Inference(**cfg)
     runner.run()

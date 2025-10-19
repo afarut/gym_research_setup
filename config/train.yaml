@@ -30,6 +30,7 @@ trainer:
   entropy_coef: 0.01
   optimizer:
     _target_: torch.optim.AdamW
+  accum_steps: 1
 
 seed: 42
 tensorboard_port: 6006

@@ -1,0 +1,45 @@
+# @package _global_
+
+env:
+  id: "Ant-v5"
+  _target_: gymnasium.make_vec
+  num_envs: 128
+  vectorization_mode: async
+model:
+  hidden_dim: 512
+  # body:
+  #   _target_: common.utils.build_mlp
+  #   input_dim: 105
+  #   hidden_dim: ${model.hidden_dim}
+  #   depth: 4
+  #   activation: Tanh
+  head:
+    _target_: model.head.ContinuosHead
+    input_dim: 105
+    hidden_dim: ${model.hidden_dim}
+    output_dim: 8
+    activation: ELU
+    depth: 3
+  value:
+    _target_: common.utils.build_mlp
+    input_dim: 105
+    hidden_dim: 1024
+    output_dim: 1
+    depth: 4
+    activation: ELU
+data_miner:
+  gamma: 0.99
+  alpha: 0.95
+  batch_size: 4096
+  num_steps: 512
+  _target_: core.dataminer.ClassicDataMiner
+trainer:
+  _target_: core.trainer.PPOTrainer
+  accum_steps: 32
+  optimizer:
+    lr: 5e-5
+  entropy_coef: 0.01
+  value_coef: 1
+
+num_pseudo_epochs: 500
+eval_freq: 10

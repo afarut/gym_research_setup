@@ -89,8 +89,11 @@ class Runner:
 
             rollout_metrics = []
 
-            for state, action, reward, advantage, value_target, log_prob in dataloader:
+            assert len(dataloader) % self.trainer.accum_steps == 0
+
+            for current_step, (state, action, reward, advantage, value_target, log_prob) in enumerate(dataloader):
                 metrics = self.trainer.step(
+                    current_step=current_step,
                     state=state, 
                     action=action, 
                     advantage=advantage, 

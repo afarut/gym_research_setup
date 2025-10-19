@@ -1,5 +1,4 @@
 import torch
-from common.utils import reinforce_loss
 from model.base import AutoModel
 
 
@@ -8,24 +7,25 @@ class BaseTrainer:
             self,
             *,
             model: AutoModel,
+            accum_steps=1,
             optimizer: torch.optim.Optimizer=None,
             entropy_coef=0.01,
         ):
         self.model = model
         self.optimizer = optimizer
         self.entropy_coef = entropy_coef
+        self.accum_steps = accum_steps
 
-    def step(self, **kwargs):
-
+    def step(self, current_step, **kwargs):
         loss, metrics = self.loss(**kwargs)
 
-        self.optimizer.zero_grad()
+        (loss / self.accum_steps).backward()
 
-        loss.backward()
+        if current_step % self.accum_steps == self.accum_steps - 1:
+            metrics.update(self.model.clip())
 
-        metrics.update(self.model.clip())
-
-        self.optimizer.step()
+            self.optimizer.step()
+            self.optimizer.zero_grad()
 
         return metrics
 
@@ -87,17 +87,41 @@ class A2CTrainer(BaseTrainer):
         }
 
 
-class PPOTrainer(BaseTrainer):
-    """Proximal Policy Optimization"""
+class TRPOTrainer(A2CTrainer):
+    def __init__(
+            self,
+            **kwargs,
+        ):
+        super().__init__(**kwargs)
+
+    def loss(self, state, action, advantage, value_target, log_prob, *args, **kwargs):
+        new_log_prob, entropy_loss, value = self.model.step(state, action)
+
+        ratio = (new_log_prob - log_prob).exp()
+
+        rl_loss = -(ratio * advantage).mean()
+
+        value_loss = ((value_target - value) ** 2).mean()
+
+        loss = rl_loss + value_loss * self.value_coef + entropy_loss * self.entropy_coef
+
+        return loss, {
+            "loss": loss.item(),
+            "rl_loss": rl_loss.item(),
+            "value_loss": value_loss.item(),
+            "entropy_loss": entropy_loss.item(),
+            "approx_kl": (ratio - 1).pow(2).mean().item(),
+        }
+
+
+class PPOTrainer(A2CTrainer):
     def __init__(
             self,
             *,
-            value_coef=1,
             clip_param=0.2,
             **kwargs,
         ):
         super().__init__(**kwargs)
-        self.value_coef = value_coef
         self.clip_param = clip_param
 
     def loss(self, state, action, advantage, value_target, log_prob, *args, **kwargs):        
@@ -109,16 +133,16 @@ class PPOTrainer(BaseTrainer):
         
         surr2 = torch.clamp(ratio, 1.0 - self.clip_param, 1.0 + self.clip_param) * advantage
 
-        policy_loss = -torch.min(surr1, surr2).mean()
+        rl_loss = -torch.min(surr1, surr2).mean()
 
         value_loss = ((value_target - value) ** 2).mean()
 
-        loss = policy_loss + value_loss * self.value_coef + entropy_loss * self.entropy_coef # Предполагая, что self.entropy_coef определен
+        loss = rl_loss + value_loss * self.value_coef + entropy_loss * self.entropy_coef
 
         return loss, {
             "loss": loss.item(),
-            "policy_loss": policy_loss.item(), # Переименовано из "rl_loss"
+            "rl_loss": rl_loss.item(),
             "value_loss": value_loss.item(),
             "entropy_loss": entropy_loss.item(),
-            "approx_kl": (ratio - 1).pow(2).mean().item(), # Полезно для мониторинга
+            "approx_kl": (ratio - 1).pow(2).mean().item(),
         }

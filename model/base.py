@@ -30,13 +30,13 @@ class AutoModel(nn.Module):
             raise ModuleNotFoundError("Distribution for your head not found")
 
         if body is None:
-            self.body = nn.Sequential().to(self.device)
+            self.body = None
         else:
-            self.body = body
+            self.body = body.to(self.device)
         if value is None:
             self.value = lambda x: (x.detach() * 0).mean(dim=-1).unsqueeze(-1)
         else:
-            self.value = value
+            self.value = value.to(self.device)
 
         print("Body:", self.body)
         print("RL head:", self.head)
@@ -56,8 +56,9 @@ class AutoModel(nn.Module):
         return metrics
 
     def forward(self, x):
-        logits = self.body(x)
-        return self.head(logits), self.value(logits)
+        if self.body is not None:
+            x = self.body(x)
+        return self.head(x), self.value(x)
 
     def sample(self, state: torch.Tensor):
         if not isinstance(state, torch.Tensor):

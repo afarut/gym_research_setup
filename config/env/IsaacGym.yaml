@@ -8,10 +8,7 @@ env:
   headless: True
   seed: 0
   num_envs: 1
-  # force_render: False
-# data_miner:
-#   _target_: core.dataminer.IsaacDataMiner
-
+  force_render: False
   
 device: cuda
 

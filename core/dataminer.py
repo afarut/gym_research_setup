@@ -1,9 +1,7 @@
 import torch
-import numpy as np
 from torch.utils.data import DataLoader
 from model.base import AutoModel
 from gymnasium import Env
-from common.utils import stack_dict, collate_to_device, list_dict_extend, reinforce_loss
 
 
 class SimpleDataMiner:
@@ -140,14 +138,14 @@ class IsaacDataMiner(SimpleDataMiner):
         for i in range(self.num_steps + 1):
             action, log_prob, value = self.model.sample(observation)
 
-            trajectory["state"].append(observation.clone().detach())
-            trajectory["action"].append(action.clone().detach())
-            trajectory["log_prob"].append(log_prob.clone().detach())
-            trajectory["value"].append(value.clone().detach())
+            trajectory["state"].append(observation.clone())
+            trajectory["action"].append(action.clone())
+            trajectory["log_prob"].append(log_prob.clone())
+            trajectory["value"].append(value.clone())
 
             observation, reward, terminated, info = self.env.step(action)
             observation = observation["obs"]
-            trajectory["reward"].append(reward.clone().detach())
+            trajectory["reward"].append(reward.clone())
 
             for j in range(terminated.shape[0]):
                 if terminated[j]:
@@ -214,86 +212,3 @@ class ClassicDataMiner(SimpleDataMiner):
                 pointers[i].pop()
 
         return trajectory, pointers
-    
-
-
-
-
-
-# class TrajectoryDataMiner(SimpleDataMiner):
-#     def __init__(
-#             self,
-#             num_trajectories=2,
-#             *args,
-#             **kwargs
-#         ):
-#         super().__init__(*args, **kwargs)
-#         self.num_trajectories = num_trajectories
-
-#     def preprocess(self, seeds):
-#         trajectories = []
-#         rewards = []
-#         episode_time = []
-#         if not seeds:
-#             for _ in range(self.num_trajectories):
-#                 seeds.append(self.seed)
-#                 self.seed += 1
-#                 while self.seed in self.eval_seeds:
-#                     self.seed += 1
-    
-#         for seed in seeds:
-#             trajectory = self.get_trajectory(seed)
-#             trajectories.append(trajectory)
-#             rewards.append(sum(trajectory["reward"]))
-#             episode_time.append(len(trajectory["reward"]))
-
-#         trajectories = list_dict_extend(trajectories)
-#         trajectories = stack_dict(trajectories)
-
-#         return trajectories, {
-#             "episode time": sum(episode_time) / len(episode_time),
-#             "rewards": sum(rewards) / len(rewards),
-#         }
-
-
-# class StepsDataMiner(SimpleDataMiner):
-#     def __init__(
-#             self,
-#             num_steps=5000,
-#             *args,
-#             **kwargs
-#         ):
-#         super().__init__(*args, **kwargs)
-#         self.num_steps = num_steps
-    
-#     def preprocess(self, seeds):
-#         trajectories = []
-#         rewards = []
-#         episode_time = []
-    
-#         for seed in seeds:
-#             trajectory = self.get_trajectory(seed)
-#             trajectories.append(trajectory)
-#             rewards.append(sum(trajectory["reward"]))
-#             episode_time.append(len(trajectory["reward"]))
-#         else:
-#             while sum(episode_time) < self.num_steps:
-#                 trajectory = self.get_trajectory(self.seed)
-#                 trajectories.append(trajectory)
-#                 rewards.append(sum(trajectory["reward"]))
-#                 episode_time.append(len(trajectory["reward"]))
-
-#                 self.seed += 1
-#                 while self.seed in self.eval_seeds:
-#                     self.seed += 1
-
-#         trajectories = list_dict_extend(trajectories)
-#         trajectories = stack_dict(trajectories)
-
-#         for key, val in trajectories.items():
-#             trajectories[key] = val[:self.num_steps]
-
-#         return trajectories, {
-#             "episode time": sum(episode_time) / len(episode_time),
-#             "rewards": sum(rewards) / len(rewards),
-#         }
